@@ -196,7 +196,13 @@ class BatchTester:
                 "predicted_class": result["predicted_class"],
                 "confidence": result["confidence"],
                 "evidence_summary": result["evidence_summary"],
-                "processing_time": result["processing_time"]
+                "processing_time": result["processing_time"],
+                "best_guess": result.get("best_guess"),
+                "best_guess_confidence": result.get("best_guess_confidence"),
+                "why_uncertain_reasons": ";".join(result.get("why_uncertain", {}).get("reasons", [])) if result.get("why_uncertain") else "",
+                "why_uncertain_narrative": result.get("why_uncertain", {}).get("narrative", "") if result.get("why_uncertain") else "",
+                "missing_information_questions": " | ".join(result.get("missing_information_questions", [])),
+                "needs_followup": result.get("needs_followup")
             }
             csv_data.append(csv_row)
         
@@ -266,7 +272,19 @@ class BatchTester:
                 print(f"   📝 Note: {errors} API failures excluded from accuracy calculation")
         elif total_with_ground_truth > 0:
             print(f"\n⚠️  All {total_with_ground_truth} images with ground truth had API failures - no accuracy can be calculated")
-        
+
+        uncertain_cases = [r for r in results if r.get("predicted_class") == "Uncertain"]
+        if uncertain_cases:
+            reason_counts = {}
+            for r in uncertain_cases:
+                for reason in (r.get("why_uncertain", {}) or {}).get("reasons", []) or []:
+                    reason_counts[reason] = reason_counts.get(reason, 0) + 1
+            print(f"\n🤔 Uncertain cases: {len(uncertain_cases)}")
+            if reason_counts:
+                print("   Top uncertainty reasons:")
+                for reason, cnt in sorted(reason_counts.items(), key=lambda x: -x[1])[:5]:
+                    print(f"   - {reason}: {cnt}")
+
         # Average confidence
         confidences = [r["confidence"] for r in results if r["predicted_class"] != "ERROR"]
         if confidences:

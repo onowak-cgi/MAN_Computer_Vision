@@ -59,7 +59,12 @@ class ResultsAnalyzer:
                 "predicted_class": result["predicted_class"],
                 "confidence": result["confidence"],
                 "evidence_summary": result["evidence_summary"],
-                "correct": result["ground_truth"] == result["predicted_class"] if result["ground_truth"] != "Unknown" else None
+                "correct": result["ground_truth"] == result["predicted_class"] if result["ground_truth"] != "Unknown" else None,
+                "best_guess": result.get("best_guess"),
+                "best_guess_confidence": result.get("best_guess_confidence"),
+                "why_uncertain_reasons": (result.get("why_uncertain", {}) or {}).get("reasons", []),
+                "why_uncertain_narrative": (result.get("why_uncertain", {}) or {}).get("narrative"),
+                "missing_information_questions": result.get("missing_information_questions", []),
             }
             records.append(record)
         
@@ -126,7 +131,27 @@ class ResultsAnalyzer:
         plt.show()
         
         return cm
-    
+
+    def create_confusion_matrix_with_best_guess(self, df: pd.DataFrame, save_path: str = None):
+        """
+        Create a confusion matrix where 'Uncertain' predictions are replaced by 'best_guess'
+        (when available). Only uses rows with known ground truth and non-ERROR predictions.
+        """
+        df_bg = df[
+            (df["ground_truth"] != "Unknown") &
+            (df["predicted_class"] != "ERROR")
+        ].copy()
+
+        mask_uncertain = df_bg["predicted_class"] == "Uncertain"
+        has_best_guess = mask_uncertain & df_bg["best_guess"].notna()
+        df_bg.loc[has_best_guess, "predicted_class"] = df_bg.loc[has_best_guess, "best_guess"]
+
+        return self.create_confusion_matrix(
+            df_bg,
+            save_path=save_path or (self.output_dir / "confusion_matrix_with_best_guess.png")
+        )
+
+
     def calculate_metrics(self, df_clean: pd.DataFrame) -> Dict[str, Any]:
         """Calculate detailed performance metrics"""
         
@@ -182,6 +207,17 @@ class ResultsAnalyzer:
         
         return metrics
     
+    def calculate_metrics_with_best_guess(self, df: pd.DataFrame) -> Dict[str, Any]:
+        df_bg = df[
+            (df["ground_truth"] != "Unknown") &
+            (df["predicted_class"] != "ERROR")
+        ].copy()
+        uncertain_mask = df_bg["predicted_class"] == "Uncertain"
+        with_best = uncertain_mask & df_bg["best_guess"].notna()
+        df_bg.loc[with_best, "predicted_class"] = df_bg.loc[with_best, "best_guess"]
+        return self.calculate_metrics(df_bg)
+
+
     def create_confidence_analysis(self, df: pd.DataFrame, save_path: str = None):
         """Analyze confidence scores"""
         
@@ -253,153 +289,221 @@ class ResultsAnalyzer:
         
         plt.show()
     
-    def generate_report(self, results: Dict[str, Any], metrics: Dict[str, Any], 
-                       save_path: str = None) -> str:
-        """Generate HTML performance report"""
-        
+    def generate_report(self, results: Dict[str, Any], metrics: Dict[str, Any],
+                        metrics_bg: Dict[str, Any] = None, save_path: str = None) -> str:
+        """Generate an HTML performance report"""
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        html_content = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Heat Protection Sleeve Classification Report</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 40px; }}
-                .header {{ background-color: #f0f0f0; padding: 20px; border-radius: 5px; }}
-                .metric {{ margin: 10px 0; }}
-                .section {{ margin: 30px 0; }}
-                table {{ border-collapse: collapse; width: 100%; }}
-                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                th {{ background-color: #f2f2f2; }}
-                .good {{ color: green; font-weight: bold; }}
-                .warning {{ color: orange; font-weight: bold; }}
-                .error {{ color: red; font-weight: bold; }}
-            </style>
-        </head>
-        <body>
-        """
-        
+
         # Handle both old 'directory' and new 'directories' formats
-        if 'directories' in results['metadata']:
-            test_dirs = ', '.join(results['metadata']['directories'])
+        metadata = results.get("metadata", {}) or {}
+        if "directories" in metadata and isinstance(metadata["directories"], list):
+            test_dirs = ", ".join(metadata["directories"])
         else:
-            test_dirs = results['metadata'].get('directory', 'Unknown')
-        
-        html_content += f"""
-            <div class="header">
-                <h1>🔧 Heat Protection Sleeve Classification Report</h1>
-                <p><strong>Generated:</strong> {timestamp}</p>
-                <p><strong>Test Directory:</strong> {test_dirs}</p>
-                <p><strong>Total Images:</strong> {results['metadata']['total_images']}</p>
-            </div>
-        """
-        
-        # Overall Performance
+            test_dirs = metadata.get("directory", "Unknown")
+
+        total_images_meta = metadata.get("total_images", "Unknown")
+
+        # Basic HTML skeleton and styles
+        html_content = f"""<!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Heat Protection Sleeve Classification Report</title>
+      <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; }}
+        .header {{ background-color: #f0f0f0; padding: 20px; border-radius: 5px; }}
+        .metric {{ margin: 10px 0; }}
+        .section {{ margin: 30px 0; }}
+        table {{ border-collapse: collapse; width: 100%; }}
+        th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+        th {{ background-color: #f2f2f2; }}
+        .good {{ color: green; font-weight: bold; }}
+        .warning {{ color: orange; font-weight: bold; }}
+        .error {{ color: red; font-weight: bold; }}
+        .small {{ color: #666; font-size: 12px; }}
+        code, pre {{ background: #fafafa; border: 1px solid #eee; padding: 2px 4px; border-radius: 3px; }}
+      </style>
+    </head>
+    <body>
+
+      <div class="header">
+        <h1>🔧 Heat Protection Sleeve Classification Report</h1>
+        <p><strong>Generated:</strong> {timestamp}</p>
+        <p><strong>Test Directory:</strong> {test_dirs}</p>
+        <p><strong>Total Images (metadata):</strong> {total_images_meta}</p>
+      </div>
+    """
+
+        # Overall performance block
         if "error" not in metrics:
-            overall = metrics["overall"]
+            overall = metrics.get("overall", {}) or {}
+
+            def badge_class(acc: float) -> str:
+                if acc is None:
+                    return ""
+                if acc > 0.8:
+                    return "good"
+                if acc > 0.6:
+                    return "warning"
+                return "error"
+
+            acc = overall.get("accuracy", 0.0)
             html_content += f"""
-            <div class="section">
-                <h2>📊 Overall Performance</h2>
-                <div class="metric">Accuracy: <span class="{'good' if overall['accuracy'] > 0.8 else 'warning' if overall['accuracy'] > 0.6 else 'error'}">{overall['accuracy']:.2%}</span></div>
-                <div class="metric">Precision (Macro): {overall['precision_macro']:.3f}</div>
-                <div class="metric">Recall (Macro): {overall['recall_macro']:.3f}</div>
-                <div class="metric">F1-Score (Macro): {overall['f1_macro']:.3f}</div>
-                <div class="metric">Total Samples: {overall['total_samples']}</div>
-            </div>
-            
-            <div class="section">
-                <h2>📈 Per-Class Performance</h2>
-                <table>
-                    <tr>
-                        <th>Class</th>
-                        <th>Precision</th>
-                        <th>Recall</th>
-                        <th>F1-Score</th>
-                        <th>Support</th>
-                    </tr>
-            """
-            
-            for class_name, class_metrics in metrics["per_class"].items():
-                html_content += f"""
-                    <tr>
-                        <td>{class_name}</td>
-                        <td>{class_metrics['precision']:.3f}</td>
-                        <td>{class_metrics['recall']:.3f}</td>
-                        <td>{class_metrics['f1_score']:.3f}</td>
-                        <td>{class_metrics['support']}</td>
-                    </tr>
-                """
-            
-            html_content += "</table></div>"
-        
-        # Error Analysis
-        errors = [r for r in results["results"] if r["predicted_class"] == "ERROR"]
-        if errors:
+      <div class="section">
+        <h2>📊 Overall Performance</h2>
+        <div class="metric">Accuracy: <span class="{badge_class(acc)}">{acc:.2%}</span></div>
+        <div class="metric">Precision (Macro): {overall.get('precision_macro', 0.0):.3f}</div>
+        <div class="metric">Recall (Macro): {overall.get('recall_macro', 0.0):.3f}</div>
+        <div class="metric">F1-Score (Macro): {overall.get('f1_macro', 0.0):.3f}</div>
+        <div class="metric">Total Samples (valid): {overall.get('total_samples', 0)}</div>
+      </div>
+
+      <div class="section">
+        <h2>📈 Per-Class Performance</h2>
+        <table>
+          <tr>
+            <th>Class</th>
+            <th>Precision</th>
+            <th>Recall</th>
+            <th>F1-Score</th>
+            <th>Support</th>
+          </tr>
+    """
+            for class_name, class_metrics in (metrics.get("per_class", {}) or {}).items():
+                html_content += f"""      <tr>
+            <td>{class_name}</td>
+            <td>{class_metrics.get('precision', 0.0):.3f}</td>
+            <td>{class_metrics.get('recall', 0.0):.3f}</td>
+            <td>{class_metrics.get('f1_score', 0.0):.3f}</td>
+            <td>{class_metrics.get('support', 0)}</td>
+          </tr>
+    """
+            html_content += "    </table>\n  </div>\n"
+
+        # Uncertainty Analysis section (using per-image `results["results"]`)
+        uncertain = [r for r in results.get("results", []) if r.get("predicted_class") == "Uncertain"]
+        if uncertain:
+            from collections import Counter
+            reason_counter = Counter()
+            question_counter = Counter()
+
+            for r in uncertain:
+                reasons = ((r.get("why_uncertain", {}) or {}).get("reasons", []) or [])
+                reason_counter.update(reasons)
+                qs = (r.get("missing_information_questions", []) or [])
+                question_counter.update(qs)
+
             html_content += f"""
-            <div class="section">
-                <h2>❌ Error Analysis</h2>
-                <p>Total Errors: <span class="error">{len(errors)}</span></p>
-                <ul>
-            """
-            for error in errors[:10]:  # Show first 10 errors
-                html_content += f"<li>{error['image_name']}: {error['evidence_summary']}</li>"
-            
-            if len(errors) > 10:
-                html_content += f"<li>... and {len(errors) - 10} more errors</li>"
-            
-            html_content += "</ul></div>"
-        
-        html_content += """
-        </body>
-        </html>
-        """
-        
+      <div class="section">
+        <h2>🤔 Uncertainty Analysis</h2>
+        <p>Total Uncertain: <strong>{len(uncertain)}</strong></p>
+    """
+
+            if reason_counter:
+                html_content += "    <h3>Top Reasons</h3>\n    <ul>\n"
+                for reason, cnt in reason_counter.most_common(10):
+                    html_content += f"      <li>{reason}: {cnt}</li>\n"
+                html_content += "    </ul>\n"
+
+            if question_counter:
+                html_content += "    <h3>Frequently Raised Questions (from model)</h3>\n    <ol>\n"
+                for q, cnt in question_counter.most_common(10):
+                    html_content += f"      <li>{q} <em>({cnt}×)</em></li>\n"
+                html_content += "    </ol>\n"
+
+            html_content += "  </div>\n"
+
+        if metrics_bg and ("overall" in metrics_bg):
+            overall_bg = metrics_bg.get("overall", {}) or {}
+            html_content += f"""
+      <div class="section">
+        <h2>📊 Performance Using Best Guess (for Uncertain)</h2>
+        <div class="metric">Accuracy (with best guess): <strong>{overall_bg.get('accuracy', 0.0):.2%}</strong></div>
+        <div class="metric">Macro F1 (with best guess): {overall_bg.get('f1_macro', 0.0):.3f}</div>
+        <p class="small"><em>Note:</em> This analysis view replaces 'Uncertain' predictions with their 'best_guess' solely for evaluation. Original stored predictions remain unchanged.</p>
+      </div>
+    """
+
         # Save report
         if save_path is None:
             save_path = self.output_dir / "performance_report.html"
-        
-        with open(save_path, 'w') as f:
-            f.write(html_content)
-        
+
+        save_path = Path(save_path)
+        save_path.write_text(html_content, encoding="utf-8")
         print(f"📄 Generated performance report: {save_path}")
-        
+
         return str(save_path)
+
     
     def analyze_results(self, results_file: str) -> Dict[str, Any]:
-        """Complete analysis pipeline"""
-        
+        """Main analysis workflow"""
         print("🔍 Starting results analysis...")
-        
-        # Load results
-        results = self.load_results(results_file)
-        
-        # Prepare data
-        df, df_clean = self.prepare_data(results)
-        
-        # Create confusion matrix
-        cm = self.create_confusion_matrix(df_clean)
-        
-        # Calculate metrics
-        metrics = self.calculate_metrics(df_clean)
-        
-        # Confidence analysis
-        self.create_confidence_analysis(df)
-        
-        # Generate report
-        report_path = self.generate_report(results, metrics)
-        
-        # Print summary
-        self.print_analysis_summary(metrics, len(df))
 
-        # Print binary-only analysis (excluding 'Uncertain')
+        # 1) Load results
+        results = self.load_results(results_file)
+
+        # 2) Prepare data
+        df, df_clean = self.prepare_data(results)
+
+        # 3) Strict confusion matrix (saved to file)
+        cm = self.create_confusion_matrix(
+            df_clean,
+            save_path=self.output_dir / "confusion_matrix.png"
+        )
+
+        # 4) Strict metrics
+        metrics = self.calculate_metrics(df_clean)
+
+        # 5) Confidence analysis (saved to file)
+        #    Uses the full df (includes 'Unknown' GT filtering inside the plot logic where needed)
+        self.create_confidence_analysis(
+            df,
+            save_path=self.output_dir / "confidence_analysis.png"
+        )
+
+        # 6) Best-guess view (optional but recommended)
+        #    Replace 'Uncertain' predictions with their 'best_guess' for analysis only.
+        cm_bg = []
+        metrics_bg = None
+
+        # These helpers should be added to ResultsAnalyzer as suggested earlier.
+        # Guarded calls allow backward compatibility if they don't exist yet.
+        if hasattr(self, "create_confusion_matrix_with_best_guess"):
+            try:
+                cm_bg_arr = self.create_confusion_matrix_with_best_guess(
+                    df,
+                    save_path=self.output_dir / "confusion_matrix_with_best_guess.png"
+                )
+                if cm_bg_arr is not None and getattr(cm_bg_arr, "size", 0) > 0:
+                    cm_bg = cm_bg_arr.tolist()
+            except Exception as e:
+                print(f"⚠️  Skipped best-guess confusion matrix due to error: {e}")
+
+        if hasattr(self, "calculate_metrics_with_best_guess"):
+            try:
+                metrics_bg = self.calculate_metrics_with_best_guess(df)
+            except Exception as e:
+                print(f"⚠️  Skipped best-guess metrics due to error: {e}")
+
+        # 7) Generate HTML report (includes uncertainty analysis and optional best-guess section)
+        # 🔧 If you don't want to include best-guess metrics in the report, pass `metrics_bg=None`.
+        report_path = self.generate_report(results, metrics, metrics_bg=metrics_bg)
+
+        # 8) Console summaries
+        self.print_analysis_summary(metrics, total_images=len(df))
         self.print_binary_analysis(df_clean)
-        
+
+        print("\n✨ Analysis completed successfully!")
+        print("📄 Check the performance report for detailed results")
+
         return {
             "metrics": metrics,
-            "confusion_matrix": cm.tolist() if len(cm) > 0 else [],
-            "report_path": report_path
+            "metrics_with_best_guess": metrics_bg,
+            "confusion_matrix": cm.tolist() if getattr(cm, "size", 0) > 0 else [],
+            "confusion_matrix_with_best_guess": cm_bg,
+            "report_path": report_path,
         }
+
     
     def print_analysis_summary(self, metrics: Dict[str, Any], total_images: int):
         """Print analysis summary to console"""
@@ -426,6 +530,37 @@ class ResultsAnalyzer:
             print(f"      Recall: {class_metrics['recall']:.3f}")
             print(f"      F1-Score: {class_metrics['f1_score']:.3f}")
             print(f"      Support: {class_metrics['support']}")
+        
+        # Uncertainty section
+        uncertain = [r for r in results["results"] if r.get("predicted_class") == "Uncertain"]
+        if uncertain:
+            from collections import Counter
+            reason_counter = Counter()
+            question_counter = Counter()
+            for r in uncertain:
+                reason_counter.update((r.get("why_uncertain", {}) or {}).get("reasons", []) or [])
+                question_counter.update(r.get("missing_information_questions", []) or [])
+
+            html_content += """
+            <div class="section">
+              <h2>🤔 Uncertainty Analysis</h2>
+              <p>Total Uncertain: <strong>{count}</strong></p>
+            """.format(count=len(uncertain))
+
+            if reason_counter:
+                html_content += "<h3>Top Reasons</h3><ul>"
+                for reason, cnt in reason_counter.most_common(10):
+                    html_content += f"<li>{reason}: {cnt}</li>"
+                html_content += "</ul>"
+
+            if question_counter:
+                html_content += "<h3>Frequently Raised Questions (from model)</h3><ol>"
+                for q, cnt in question_counter.most_common(10):
+                    html_content += f"<li>{q} <em>({cnt}×)</em></li>"
+                html_content += "</ol>"
+
+            html_content += "</div>"
+
 
     def print_binary_analysis(self, df_clean: pd.DataFrame):
         """Print a classification report for binary (OK/Broken) cases only."""

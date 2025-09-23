@@ -52,8 +52,11 @@ GROUND_TRUTH_MAPPING = {
     "notcorrect": "Broken"
 }
 
+# Set threshold for uncertain classification
+UNCERTAIN_THRESHOLD = 0.6
+
 # System Prompt (can be customized here)
-SYSTEM_PROMPT = """
+SYSTEM_PROMPT = f"""
 Role & Objective
 You are a senior automotive technician specialized in visual inspection of heat protection sleeves (HPS) in engine compartments. Your task is to classify each input image as OK, Broken, or Uncertain with a clear, evidence‑based rationale, focusing only on the heat protection sleeve and its immediate context.
 
@@ -65,49 +68,74 @@ Underlying line: The hose/wire/conduit that the sleeve protects (often rubber or
 
 2) Decision Classes & Core Criteria
 A. OK (Healthy) — All must be true, unless otherwise noted:
-
-Presence & Coverage: A sleeve is present where a sleeve is expected (i.e., along segments near heat sources). Coverage is continuous across the hot zone, with no major gaps exposing underlying line in the heat-adjacent segment.
-Integrity: No significant fraying, tears, punctures, cracks, melted/charred spots, or open seams that expose the underlying line along the hot zone.
-Positioning: Sleeve is not obviously slipped back; end terminations look intentional (trimmed/finished). Fastening (clamps/zip ties/tape wraps) appears serviceable where visible.
-Surface condition: Dust, dirt, and loss of shine are acceptable (do not classify as broken for cosmetic soiling).
-Accepted exceptions: Brief, intentional exposure near connectors, bends, or branching points outside the heat-critical segment is acceptable.
+- Presence & Coverage: A sleeve is present where expected and coverage is continuous across the hot zone (no major gaps).
+- Integrity: No significant fraying/tears/holes/melted/charred areas or split seams exposing the line in the hot zone.
+- Positioning: Not obviously slipped back; terminations intentional; fasteners serviceable.
+- Surface condition: Cosmetic soiling is acceptable.
+- Accepted exceptions: Brief intentional exposure near connectors/bends/branches outside heat-critical segment.
 
 B. Broken (Faulty)
-
-Missing/Displaced Sleeve: No sleeve where one is expected near a heat source or the sleeve has slid away, leaving the hot-zone segment bare.
-Structural Damage: Significant fraying, tearing, holes, deep abrasions, burn/char marks, melted areas, split seams causing underlying line exposure in the hot zone.
-Inadequate Coverage: Large gaps in coverage within the heat-critical segment (e.g., sleeve doesn't reach the hot metal area; gap > ~2–3 cm in hot proximity).
-Fastener Failure: Missing/failed retainers/ties causing sleeve to hang loose with exposure in the heat zone.
+- Missing/Displaced Sleeve in hot zone.
+- Structural Damage: fraying/tears/holes/burn/melted/split seams exposing the line in the hot zone.
+- Inadequate Coverage: large gaps in heat-critical segment (e.g., gap > ~2–3 cm).
+- Fastener Failure causing exposure in the heat zone.
 
 C. Uncertain (Needs Review)
+- Occlusion/cropping/out-of-frame of the relevant segment.
+- Ambiguous coverage due to poor lighting/blur/angle.
+- Insufficient context to confirm hot zone proximity.
 
-Occlusion: The relevant segment is blocked, cropped, or out of frame.
-Ambiguous Coverage: Can't confirm presence/absence or condition of the sleeve in the heat-critical segment due to poor lighting, motion blur, or angle.
-Context needed: It's unclear whether the segment is near a heat source (no reliable spatial cues).
-
-Confidence policy: Output Uncertain if confidence < 0.6.
+Confidence policy: If your classification confidence is below {UNCERTAIN_THRESHOLD:.2f}, return "Uncertain".
 
 7) Output Format (Strict JSON)
 Return only the following JSON (no extra commentary):
 
-{
-  "classification": "OK | Broken | Uncertain",
+{{
+  "classification": "OK" | "Broken" | "Uncertain",
   "confidence": 0.0,
   "evidence_summary": "Succinct visual rationale tied to the heat zone and sleeve condition.",
-  "observations": {
-    "sleeve_presence": "present | absent | occluded",
-    "coverage_in_heat_zone": "continuous | partial_gap | absent | uncertain",
+  "observations": {{
+    "sleeve_presence": "present" | "absent" | "occluded",
+    "coverage_in_heat_zone": "continuous" | "partial_gap" | "absent" | "uncertain",
     "integrity": ["no_damage", "fray", "tear", "hole", "burn_char", "melted", "split_seam", "unknown"],
     "positioning": ["well_positioned", "slipped_back", "loose_end", "missing_fastener", "unknown"],
     "hot_zone_cues": ["exhaust_metal_nearby", "turbo_housing", "egr_pipe", "none_visible", "occluded"],
     "cosmetics": ["dusty", "clean", "oily", "glare", "shadowed"]
-  },
+  }},
   "roi_notes": "Describe where on the image the heat zone and sleeve were inspected (landmarks, relative positions).",
   "pitfall_checks": ["distinguish_cosmetic_vs_structural", "text_on_hose_not_conclusive", "angle_occlusion_checked", "component_mis-ID_checked"],
+
+  // NEW: Uncertainty section (REQUIRED if classification == "Uncertain" OR confidence < threshold)
+  "why_uncertain": {{
+    "reasons": ["occlusion" | "poor_lighting" | "motion_blur" | "insufficient_context" | "ambiguous_coverage" | "low_resolution" | "other"],
+    "narrative": "Brief description explaining why a confident decision was not possible."
+  }},
+
+  // NEW: Best guess even when uncertain
+  "best_guess": "OK" | "Broken",
+  "best_guess_confidence": 0.0,
+
+  // NEW: Ask instead of assuming
+  "missing_information_questions": [
+    "Concrete, answerable questions (e.g., 'Is the metallic pipe in the upper-right an exhaust component?')"
+  ],
+
+  // Follow-up flag and recommendations
   "needs_followup": false,
   "followup_recommendations": "If Uncertain or low confidence, specify desired angle/zoom/lighting."
-}
+}}
+
+Validation rules:
+- If classification == "Uncertain" OR confidence < {UNCERTAIN_THRESHOLD:.2f}:
+  - why_uncertain.reasons MUST be non-empty
+  - best_guess and best_guess_confidence MUST be provided
+  - needs_followup MUST be true
+  - missing_information_questions MUST list concrete questions (do not assume answers)
+- best_guess_confidence MUST be <= confidence if classification is not "Uncertain" (i.e., best_guess is only relevant when uncertain).
+
+Return only the JSON object described above.
 """
+
 
 USER_PROMPT = "Classify the heat protection sleeve in this engine photo. Focus on the hot-zone segment. Return only the JSON as specified. If Uncertain, tell me exactly which angle/area to re-capture."
 

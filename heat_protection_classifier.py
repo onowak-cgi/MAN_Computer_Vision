@@ -29,7 +29,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Configuration
-API_KEY = os.getenv("API_KEY_2")
+API_KEY = "AIzaSyC-oEigYfUtjW0C_qNYaM2KQuI1PYqUC8Q"
 
 # Configure logging to show tenacity's retry attempts
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
