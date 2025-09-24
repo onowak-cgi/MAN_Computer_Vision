@@ -1,0 +1,377 @@
+{
+  "metadata": {
+    "timestamp": "20250923_213425",
+    "directories": [
+      "Archiv/correct",
+      "Archiv/notcorrect"
+    ],
+    "total_images": 50
+  },
+  "results": [
+    {
+      "image_path": "Archiv\\correct\\147310880_image_3.jpeg",
+      "image_name": "147310880_image_3.jpeg",
+      "ground_truth": "OK",
+      "predicted_class": "Uncertain",
+      "confidence": 0.4,
+      "evidence_summary": "A heat protection sleeve is partially visible in the center of the frame, but it is heavily occluded by multiple hoses, tubes, and wiring looms. The full extent, coverage, and integrity of the sleeve in the hot zone cannot be determined from this angle.",
+      "raw_response": "```json\n{\n  \"classification\": \"Uncertain\",\n  \"confidence\": 0.4,\n  \"evidence_summary\": \"A heat protection sleeve is partially visible in the center of the frame, but it is heavily occluded by multiple hoses, tubes, and wiring looms. The full extent, coverage, and integrity of the sleeve in the hot zone cannot be determined from this angle.\",\n  \"observations\": {\n    \"sleeve_presence\": \"present\",\n    \"coverage_in_heat_zone\": \"uncertain\",\n    \"integrity\": [\n      \"unknown\"\n    ],\n    \"positioning\": [\n      \"unknown\"\n    ],\n    \"hot_zone_cues\": [\n      \"exhaust_metal_nearby\"\n    ],\n    \"cosmetics\": [\n      \"dusty\",\n      \"shadowed\"\n    ]\n  },\n  \"roi_notes\": \"The region of interest is in the center of the image, below a block with several fluid/air line connections and to the left of the black oil filter housing cap. A small section of a textured, possibly braided sleeve is visible amongst the clutter.\",\n  \"pitfall_checks\": [\n    \"distinguish_cosmetic_vs_structural\",\n    \"text_on_hose_not_conclusive\",\n    \"angle_occlusion_checked\",\n    \"component_mis-ID_checked\"\n  ],\n  \"needs_followup\": true,\n  \"followup_recommendations\": \"Requires a new image with a clearer line of sight to the central heat sleeve. Try capturing from a slightly higher angle, looking down, or by moving the foreground hoses aside if possible to assess the sleeve's condition and coverage.\"\n}\n```",
+      "parsed_response": {
+        "classification": "Uncertain",
+        "confidence": 0.4,
+        "evidence_summary": "A heat protection sleeve is partially visible in the center of the frame, but it is heavily occluded by multiple hoses, tubes, and wiring looms. The full extent, coverage, and integrity of the sleeve in the hot zone cannot be determined from this angle.",
+        "observations": {
+          "sleeve_presence": "present",
+          "coverage_in_heat_zone": "uncertain",
+          "integrity": [
+            "unknown"
+          ],
+          "positioning": [
+            "unknown"
+          ],
+          "hot_zone_cues": [
+            "exhaust_metal_nearby"
+          ],
+          "cosmetics": [
+            "dusty",
+            "shadowed"
+          ]
+        },
+        "roi_notes": "The region of interest is in the center of the image, below a block with several fluid/air line connections and to the left of the black oil filter housing cap. A small section of a textured, possibly braided sleeve is visible amongst the clutter.",
+        "pitfall_checks": [
+          "distinguish_cosmetic_vs_structural",
+          "text_on_hose_not_conclusive",
+          "angle_occlusion_checked",
+          "component_mis-ID_checked"
+        ],
+        "needs_followup": true,
+        "followup_recommendations": "Requires a new image with a clearer line of sight to the central heat sleeve. Try capturing from a slightly higher angle, looking down, or by moving the foreground hoses aside if possible to assess the sleeve's condition and coverage."
+      },
+      "processing_time": "2025-09-23T21:34:54.826362"
+    },
+    {
+      "image_path": "Archiv\\correct\\147328881_image_1.jpeg",
+      "image_name": "147328881_image_1.jpeg",
+      "ground_truth": "OK",
+      "predicted_class": "Uncertain",
+      "confidence": 0.1,
+      "evidence_summary": "The provided image is a wide-angle shot of the entire engine compartment. This perspective does not allow for the detailed inspection of specific hot zones, such as the exhaust manifold or turbocharger, where heat protection sleeves would be located. The relevant areas are occluded and too distant to assess.",
+      "raw_response": "```json\n{\n  \"classification\": \"Uncertain\",\n  \"confidence\": 0.1,\n  \"evidence_summary\": \"The provided image is a wide-angle shot of the entire engine compartment. This perspective does not allow for the detailed inspection of specific hot zones, such as the exhaust manifold or turbocharger, where heat protection sleeves would be located. The relevant areas are occluded and too distant to assess.\",\n  \"observations\": {\n    \"sleeve_presence\": \"occluded\",\n    \"coverage_in_heat_zone\": \"uncertain\",\n    \"integrity\": [\n      \"unknown\"\n    ],\n    \"positioning\": [\n      \"unknown\"\n    ],\n    \"hot_zone_cues\": [\n      \"occluded\"\n    ],\n    \"cosmetics\": [\n      \"dusty\"\n    ]\n  },\n  \"roi_notes\": \"The potential regions of interest (around the exhaust manifold, EGR system, and turbocharger) are not visible with sufficient detail. The inspection requires looking down the sides and back of the engine, which is not possible from this top-front angle.\",\n  \"pitfall_checks\": [\n    \"distinguish_cosmetic_vs_structural\",\n    \"text_on_hose_not_conclusive\",\n    \"angle_occlusion_checked\",\n    \"component_mis-ID_checked\"\n  ],\n  \"needs_followup\": true,\n  \"followup_recommendations\": \"Please provide close-up images of the areas where hoses and wires pass near the exhaust manifold (typically on the side of the engine block) and the turbocharger (often at the rear or side). A view from the side of the engine, looking into the space between the engine and the chassis frame, is needed.\"\n}\n```",
+      "parsed_response": {
+        "classification": "Uncertain",
+        "confidence": 0.1,
+        "evidence_summary": "The provided image is a wide-angle shot of the entire engine compartment. This perspective does not allow for the detailed inspection of specific hot zones, such as the exhaust manifold or turbocharger, where heat protection sleeves would be located. The relevant areas are occluded and too distant to assess.",
+        "observations": {
+          "sleeve_presence": "occluded",
+          "coverage_in_heat_zone": "uncertain",
+          "integrity": [
+            "unknown"
+          ],
+          "positioning": [
+            "unknown"
+          ],
+          "hot_zone_cues": [
+            "occluded"
+          ],
+          "cosmetics": [
+            "dusty"
+          ]
+        },
+        "roi_notes": "The potential regions of interest (around the exhaust manifold, EGR system, and turbocharger) are not visible with sufficient detail. The inspection requires looking down the sides and back of the engine, which is not possible from this top-front angle.",
+        "pitfall_checks": [
+          "distinguish_cosmetic_vs_structural",
+          "text_on_hose_not_conclusive",
+          "angle_occlusion_checked",
+          "component_mis-ID_checked"
+        ],
+        "needs_followup": true,
+        "followup_recommendations": "Please provide close-up images of the areas where hoses and wires pass near the exhaust manifold (typically on the side of the engine block) and the turbocharger (often at the rear or side). A view from the side of the engine, looking into the space between the engine and the chassis frame, is needed."
+      },
+      "processing_time": "2025-09-23T21:35:31.838741"
+    },
+    {
+      "image_path": "Archiv\\correct\\147740153_image_1.jpeg",
+      "image_name": "147740153_image_1.jpeg",
+      "ground_truth": "OK",
+      "predicted_class": "Uncertain",
+      "confidence": 0.3,
+      "evidence_summary": "The image provides a wide, top-down view of an engine bay, but no specific heat protection sleeve (HPS) or a clear, high-temperature hot zone (like an exhaust manifold) is visible. It is not possible to determine if an HPS is required, present, or in what condition.",
+      "raw_response": "```json\n{\n  \"classification\": \"Uncertain\",\n  \"confidence\": 0.3,\n  \"evidence_summary\": \"The image provides a wide, top-down view of an engine bay, but no specific heat protection sleeve (HPS) or a clear, high-temperature hot zone (like an exhaust manifold) is visible. It is not possible to determine if an HPS is required, present, or in what condition.\",\n  \"observations\": {\n    \"sleeve_presence\": \"occluded\",\n    \"coverage_in_heat_zone\": \"uncertain\",\n    \"integrity\": [\n      \"unknown\"\n    ],\n    \"positioning\": [\n      \"unknown\"\n    ],\n    \"hot_zone_cues\": [\n      \"none_visible\"\n    ],\n    \"cosmetics\": [\n      \"dusty\"\n    ]\n  },\n  \"roi_notes\": \"Scanned the entire image. The view includes an oil filter housing, various fluid lines, and electrical components, but no definitive HPS or adjacent hot-running metallic part is in focus or clearly identifiable.\",\n  \"pitfall_checks\": [\n    \"distinguish_cosmetic_vs_structural\",\n    \"text_on_hose_not_conclusive\",\n    \"angle_occlusion_checked\",\n    \"component_mis-ID_checked\"\n  ],\n  \"needs_followup\": true,\n  \"followup_recommendations\": \"A more targeted image is required. Please provide a closer view of the areas where hoses and wiring harnesses pass near the engine block, exhaust components, or turbocharger, which may be located below or behind the currently visible parts.\"\n}\n```",
+      "parsed_response": {
+        "classification": "Uncertain",
+        "confidence": 0.3,
+        "evidence_summary": "The image provides a wide, top-down view of an engine bay, but no specific heat protection sleeve (HPS) or a clear, high-temperature hot zone (like an exhaust manifold) is visible. It is not possible to determine if an HPS is required, present, or in what condition.",
+        "observations": {
+          "sleeve_presence": "occluded",
+          "coverage_in_heat_zone": "uncertain",
+          "integrity": [
+            "unknown"
+          ],
+          "positioning": [
+            "unknown"
+          ],
+          "hot_zone_cues": [
+            "none_visible"
+          ],
+          "cosmetics": [
+            "dusty"
+          ]
+        },
+        "roi_notes": "Scanned the entire image. The view includes an oil filter housing, various fluid lines, and electrical components, but no definitive HPS or adjacent hot-running metallic part is in focus or clearly identifiable.",
+        "pitfall_checks": [
+          "distinguish_cosmetic_vs_structural",
+          "text_on_hose_not_conclusive",
+          "angle_occlusion_checked",
+          "component_mis-ID_checked"
+        ],
+        "needs_followup": true,
+        "followup_recommendations": "A more targeted image is required. Please provide a closer view of the areas where hoses and wiring harnesses pass near the engine block, exhaust components, or turbocharger, which may be located below or behind the currently visible parts."
+      },
+      "processing_time": "2025-09-23T21:39:46.335981"
+    },
+    {
+      "image_path": "Archiv\\correct\\147864856_image_1.jpeg",
+      "image_name": "147864856_image_1.jpeg",
+      "ground_truth": "OK",
+      "predicted_class": "Uncertain",
+      "confidence": 0.1,
+      "evidence_summary": "The image is a wide-angle overview of the entire engine bay. No specific heat protection sleeve or hot-zone detail is visible for inspection due to the significant distance and lack of zoom.",
+      "raw_response": "```json\n{\n  \"classification\": \"Uncertain\",\n  \"confidence\": 0.1,\n  \"evidence_summary\": \"The image is a wide-angle overview of the entire engine bay. No specific heat protection sleeve or hot-zone detail is visible for inspection due to the significant distance and lack of zoom.\",\n  \"observations\": {\n    \"sleeve_presence\": \"occluded\",\n    \"coverage_in_heat_zone\": \"uncertain\",\n    \"integrity\": [\n      \"unknown\"\n    ],\n    \"positioning\": [\n      \"unknown\"\n    ],\n    \"hot_zone_cues\": [\n      \"exhaust_metal_nearby\",\n      \"turbo_housing\"\n    ],\n    \"cosmetics\": [\n      \"dusty\"\n    ]\n  },\n  \"roi_notes\": \"The inspection requires focusing on potential hot zones, such as the area around the turbocharger (bottom left) and the exhaust manifold (likely below the central valve cover), but these areas are too distant to assess any components.\",\n  \"pitfall_checks\": [\n    \"distinguish_cosmetic_vs_structural\",\n    \"text_on_hose_not_conclusive\",\n    \"angle_occlusion_checked\",\n    \"component_mis-ID_checked\"\n  ],\n  \"needs_followup\": true,\n  \"followup_recommendations\": \"A new, close-up image is required. Please provide a photo focusing on the wires and hoses near the turbocharger (bottom left of the current image) and another close-up of any lines running along the side of the main engine block where the exhaust manifold is typically located.\"\n}\n```",
+      "parsed_response": {
+        "classification": "Uncertain",
+        "confidence": 0.1,
+        "evidence_summary": "The image is a wide-angle overview of the entire engine bay. No specific heat protection sleeve or hot-zone detail is visible for inspection due to the significant distance and lack of zoom.",
+        "observations": {
+          "sleeve_presence": "occluded",
+          "coverage_in_heat_zone": "uncertain",
+          "integrity": [
+            "unknown"
+          ],
+          "positioning": [
+            "unknown"
+          ],
+          "hot_zone_cues": [
+            "exhaust_metal_nearby",
+            "turbo_housing"
+          ],
+          "cosmetics": [
+            "dusty"
+          ]
+        },
+        "roi_notes": "The inspection requires focusing on potential hot zones, such as the area around the turbocharger (bottom left) and the exhaust manifold (likely below the central valve cover), but these areas are too distant to assess any components.",
+        "pitfall_checks": [
+          "distinguish_cosmetic_vs_structural",
+          "text_on_hose_not_conclusive",
+          "angle_occlusion_checked",
+          "component_mis-ID_checked"
+        ],
+        "needs_followup": true,
+        "followup_recommendations": "A new, close-up image is required. Please provide a photo focusing on the wires and hoses near the turbocharger (bottom left of the current image) and another close-up of any lines running along the side of the main engine block where the exhaust manifold is typically located."
+      },
+      "processing_time": "2025-09-23T21:42:01.531850"
+    },
+    {
+      "image_path": "Archiv\\notcorrect\\145381978_image_1.jpeg",
+      "image_name": "145381978_image_1.jpeg",
+      "ground_truth": "Broken",
+      "predicted_class": "Uncertain",
+      "confidence": 0.3,
+      "evidence_summary": "The critical area where a heat protection sleeve might be expected is completely obscured by deep shadows and other components. It is impossible to determine the presence, absence, or condition of any heat sleeve.",
+      "raw_response": "```json\n{\n  \"classification\": \"Uncertain\",\n  \"confidence\": 0.3,\n  \"evidence_summary\": \"The critical area where a heat protection sleeve might be expected is completely obscured by deep shadows and other components. It is impossible to determine the presence, absence, or condition of any heat sleeve.\",\n  \"observations\": {\n    \"sleeve_presence\": \"occluded\",\n    \"coverage_in_heat_zone\": \"uncertain\",\n    \"integrity\": [\n      \"unknown\"\n    ],\n    \"positioning\": [\n      \"unknown\"\n    ],\n    \"hot_zone_cues\": [\n      \"occluded\"\n    ],\n    \"cosmetics\": [\n      \"shadowed\",\n      \"dusty\"\n    ]\n  },\n  \"roi_notes\": \"The inspection area is the gap between the large electronic module on the left and the vertical hoses/pipes on the right. The view is obstructed, and the lower sections where heat sources are likely located are in complete darkness.\",\n  \"pitfall_checks\": [\n    \"distinguish_cosmetic_vs_structural\",\n    \"text_on_hose_not_conclusive\",\n    \"angle_occlusion_checked\",\n    \"component_mis-ID_checked\"\n  ],\n  \"needs_followup\": true,\n  \"followup_recommendations\": \"A new image is required. Please use a flashlight to illuminate the shadowed area below the electronic module. A different angle from the side, looking into the gap, would also be beneficial to inspect the wiring near the engine block.\"\n}\n```",
+      "parsed_response": {
+        "classification": "Uncertain",
+        "confidence": 0.3,
+        "evidence_summary": "The critical area where a heat protection sleeve might be expected is completely obscured by deep shadows and other components. It is impossible to determine the presence, absence, or condition of any heat sleeve.",
+        "observations": {
+          "sleeve_presence": "occluded",
+          "coverage_in_heat_zone": "uncertain",
+          "integrity": [
+            "unknown"
+          ],
+          "positioning": [
+            "unknown"
+          ],
+          "hot_zone_cues": [
+            "occluded"
+          ],
+          "cosmetics": [
+            "shadowed",
+            "dusty"
+          ]
+        },
+        "roi_notes": "The inspection area is the gap between the large electronic module on the left and the vertical hoses/pipes on the right. The view is obstructed, and the lower sections where heat sources are likely located are in complete darkness.",
+        "pitfall_checks": [
+          "distinguish_cosmetic_vs_structural",
+          "text_on_hose_not_conclusive",
+          "angle_occlusion_checked",
+          "component_mis-ID_checked"
+        ],
+        "needs_followup": true,
+        "followup_recommendations": "A new image is required. Please use a flashlight to illuminate the shadowed area below the electronic module. A different angle from the side, looking into the gap, would also be beneficial to inspect the wiring near the engine block."
+      },
+      "processing_time": "2025-09-23T21:45:19.283746"
+    },
+    {
+      "image_path": "Archiv\\notcorrect\\145519472_image_3.png",
+      "image_name": "145519472_image_3.png",
+      "ground_truth": "Broken",
+      "predicted_class": "Uncertain",
+      "confidence": 0.4,
+      "evidence_summary": "The image provides a general, top-down view of an engine bay, but no specific heat protection sleeve is clearly visible or identifiable. Key areas where a sleeve might be expected, such as around wiring near the hot engine block and fuel lines, are either occluded by other components (e.g., fluid reservoir) or do not appear to have sleeves. It is impossible to confirm the presence, absence, or condition of any HPS.",
+      "raw_response": "```json\n{\n  \"classification\": \"Uncertain\",\n  \"confidence\": 0.4,\n  \"evidence_summary\": \"The image provides a general, top-down view of an engine bay, but no specific heat protection sleeve is clearly visible or identifiable. Key areas where a sleeve might be expected, such as around wiring near the hot engine block and fuel lines, are either occluded by other components (e.g., fluid reservoir) or do not appear to have sleeves. It is impossible to confirm the presence, absence, or condition of any HPS.\",\n  \"observations\": {\n    \"sleeve_presence\": \"occluded\",\n    \"coverage_in_heat_zone\": \"uncertain\",\n    \"integrity\": [\n      \"unknown\"\n    ],\n    \"positioning\": [\n      \"unknown\"\n    ],\n    \"hot_zone_cues\": [\n      \"exhaust_metal_nearby\"\n    ],\n    \"cosmetics\": [\n      \"dusty\"\n    ]\n  },\n  \"roi_notes\": \"The region of interest is the area around the engine block, specifically the wiring and hoses running behind the large fluid reservoir on the left and near the metallic fuel lines. Due to the wide angle and visual obstruction from other components, a detailed inspection for a specific HPS is not possible.\",\n  \"pitfall_checks\": [\n    \"distinguish_cosmetic_vs_structural\",\n    \"text_on_hose_not_conclusive\",\n    \"angle_occlusion_checked\",\n    \"component_mis-ID_checked\"\n  ],\n  \"needs_followup\": true,\n  \"followup_recommendations\": \"Provide a more focused image of the area directly behind the fluid reservoir (left side) and underneath the common rail fuel lines. A different angle, perhaps from the left side looking towards the engine block, is needed to see if any wires or hoses requiring protection are present.\"\n}\n```",
+      "parsed_response": {
+        "classification": "Uncertain",
+        "confidence": 0.4,
+        "evidence_summary": "The image provides a general, top-down view of an engine bay, but no specific heat protection sleeve is clearly visible or identifiable. Key areas where a sleeve might be expected, such as around wiring near the hot engine block and fuel lines, are either occluded by other components (e.g., fluid reservoir) or do not appear to have sleeves. It is impossible to confirm the presence, absence, or condition of any HPS.",
+        "observations": {
+          "sleeve_presence": "occluded",
+          "coverage_in_heat_zone": "uncertain",
+          "integrity": [
+            "unknown"
+          ],
+          "positioning": [
+            "unknown"
+          ],
+          "hot_zone_cues": [
+            "exhaust_metal_nearby"
+          ],
+          "cosmetics": [
+            "dusty"
+          ]
+        },
+        "roi_notes": "The region of interest is the area around the engine block, specifically the wiring and hoses running behind the large fluid reservoir on the left and near the metallic fuel lines. Due to the wide angle and visual obstruction from other components, a detailed inspection for a specific HPS is not possible.",
+        "pitfall_checks": [
+          "distinguish_cosmetic_vs_structural",
+          "text_on_hose_not_conclusive",
+          "angle_occlusion_checked",
+          "component_mis-ID_checked"
+        ],
+        "needs_followup": true,
+        "followup_recommendations": "Provide a more focused image of the area directly behind the fluid reservoir (left side) and underneath the common rail fuel lines. A different angle, perhaps from the left side looking towards the engine block, is needed to see if any wires or hoses requiring protection are present."
+      },
+      "processing_time": "2025-09-23T21:46:08.007591"
+    },
+    {
+      "image_path": "Archiv\\notcorrect\\145563721_1_image_1.jpeg",
+      "image_name": "145563721_1_image_1.jpeg",
+      "ground_truth": "Broken",
+      "predicted_class": "Uncertain",
+      "confidence": 0.2,
+      "evidence_summary": "The critical area where a heat protection sleeve would be located is heavily occluded by a cluster of foreground hoses and wiring, making it impossible to assess its presence, condition, or coverage relative to any potential heat source.",
+      "raw_response": "```json\n{\n  \"classification\": \"Uncertain\",\n  \"confidence\": 0.2,\n  \"evidence_summary\": \"The critical area where a heat protection sleeve would be located is heavily occluded by a cluster of foreground hoses and wiring, making it impossible to assess its presence, condition, or coverage relative to any potential heat source.\",\n  \"observations\": {\n    \"sleeve_presence\": \"occluded\",\n    \"coverage_in_heat_zone\": \"uncertain\",\n    \"integrity\": [\n      \"unknown\"\n    ],\n    \"positioning\": [\n      \"unknown\"\n    ],\n    \"hot_zone_cues\": [\n      \"occluded\"\n    ],\n    \"cosmetics\": [\n      \"dusty\",\n      \"shadowed\"\n    ]\n  },\n  \"roi_notes\": \"The inspection area is the central part of the image, deep behind the multiple crisscrossing black rubber hoses. This region is in shadow and almost completely blocked from view.\",\n  \"pitfall_checks\": [\n    \"distinguish_cosmetic_vs_structural\",\n    \"text_on_hose_not_conclusive\",\n    \"angle_occlusion_checked\",\n    \"component_mis-ID_checked\"\n  ],\n  \"needs_followup\": true,\n  \"followup_recommendations\": \"A new image is required. Please provide a view from a higher angle, looking down into the space behind the foreground hoses. Improved lighting aimed at the shadowed central area is necessary to see the components on the engine block.\"\n}\n```",
+      "parsed_response": {
+        "classification": "Uncertain",
+        "confidence": 0.2,
+        "evidence_summary": "The critical area where a heat protection sleeve would be located is heavily occluded by a cluster of foreground hoses and wiring, making it impossible to assess its presence, condition, or coverage relative to any potential heat source.",
+        "observations": {
+          "sleeve_presence": "occluded",
+          "coverage_in_heat_zone": "uncertain",
+          "integrity": [
+            "unknown"
+          ],
+          "positioning": [
+            "unknown"
+          ],
+          "hot_zone_cues": [
+            "occluded"
+          ],
+          "cosmetics": [
+            "dusty",
+            "shadowed"
+          ]
+        },
+        "roi_notes": "The inspection area is the central part of the image, deep behind the multiple crisscrossing black rubber hoses. This region is in shadow and almost completely blocked from view.",
+        "pitfall_checks": [
+          "distinguish_cosmetic_vs_structural",
+          "text_on_hose_not_conclusive",
+          "angle_occlusion_checked",
+          "component_mis-ID_checked"
+        ],
+        "needs_followup": true,
+        "followup_recommendations": "A new image is required. Please provide a view from a higher angle, looking down into the space behind the foreground hoses. Improved lighting aimed at the shadowed central area is necessary to see the components on the engine block."
+      },
+      "processing_time": "2025-09-23T21:46:39.178376"
+    },
+    {
+      "image_path": "Archiv\\notcorrect\\145563721_1_image_2.jpeg",
+      "image_name": "145563721_1_image_2.jpeg",
+      "ground_truth": "Broken",
+      "predicted_class": "Uncertain",
+      "confidence": 0.3,
+      "evidence_summary": "The potential heat zone in the background is heavily occluded by a dense cluster of hoses and wires in the foreground. It is impossible to determine if a heat protection sleeve is present, required, or what its condition is.",
+      "raw_response": "```json\n{\n  \"classification\": \"Uncertain\",\n  \"confidence\": 0.3,\n  \"evidence_summary\": \"The potential heat zone in the background is heavily occluded by a dense cluster of hoses and wires in the foreground. It is impossible to determine if a heat protection sleeve is present, required, or what its condition is.\",\n  \"observations\": {\n    \"sleeve_presence\": \"occluded\",\n    \"coverage_in_heat_zone\": \"uncertain\",\n    \"integrity\": [\n      \"unknown\"\n    ],\n    \"positioning\": [\n      \"unknown\"\n    ],\n    \"hot_zone_cues\": [\n      \"occluded\"\n    ],\n    \"cosmetics\": [\n      \"dusty\"\n    ]\n  },\n  \"roi_notes\": \"The area of interest is behind the foreground hoses (center and left), where they meet the large, dusty metal engine component. This entire interface is blocked from view.\",\n  \"pitfall_checks\": [\n    \"distinguish_cosmetic_vs_structural\",\n    \"text_on_hose_not_conclusive\",\n    \"angle_occlusion_checked\",\n    \"component_mis-ID_checked\"\n  ],\n  \"needs_followup\": true,\n  \"followup_recommendations\": \"A different camera angle is required. Please provide a photo taken from above, looking down into the space behind the foreground hoses, to clearly show the condition of any components near the main engine block.\"\n}\n```",
+      "parsed_response": {
+        "classification": "Uncertain",
+        "confidence": 0.3,
+        "evidence_summary": "The potential heat zone in the background is heavily occluded by a dense cluster of hoses and wires in the foreground. It is impossible to determine if a heat protection sleeve is present, required, or what its condition is.",
+        "observations": {
+          "sleeve_presence": "occluded",
+          "coverage_in_heat_zone": "uncertain",
+          "integrity": [
+            "unknown"
+          ],
+          "positioning": [
+            "unknown"
+          ],
+          "hot_zone_cues": [
+            "occluded"
+          ],
+          "cosmetics": [
+            "dusty"
+          ]
+        },
+        "roi_notes": "The area of interest is behind the foreground hoses (center and left), where they meet the large, dusty metal engine component. This entire interface is blocked from view.",
+        "pitfall_checks": [
+          "distinguish_cosmetic_vs_structural",
+          "text_on_hose_not_conclusive",
+          "angle_occlusion_checked",
+          "component_mis-ID_checked"
+        ],
+        "needs_followup": true,
+        "followup_recommendations": "A different camera angle is required. Please provide a photo taken from above, looking down into the space behind the foreground hoses, to clearly show the condition of any components near the main engine block."
+      },
+      "processing_time": "2025-09-23T21:46:57.723247"
+    },
+    {
+      "image_path": "Archiv\\notcorrect\\145700277_image_1.jpeg",
+      "image_name": "145700277_image_1.jpeg",
+      "ground_truth": "Broken",
+      "predicted_class": "Uncertain",
+      "confidence": 0.2,
+      "evidence_summary": "The target heat protection sleeve is heavily obscured by motion blur, poor lighting, and severe overexposure, making it impossible to assess its structural integrity. The proximity to a definitive heat source is also unclear due to the tight framing and other components blocking the view.",
+      "raw_response": "```json\n{\n  \"classification\": \"Uncertain\",\n  \"confidence\": 0.2,\n  \"evidence_summary\": \"The target heat protection sleeve is heavily obscured by motion blur, poor lighting, and severe overexposure, making it impossible to assess its structural integrity. The proximity to a definitive heat source is also unclear due to the tight framing and other components blocking the view.\",\n  \"observations\": {\n    \"sleeve_presence\": \"present\",\n    \"coverage_in_heat_zone\": \"uncertain\",\n    \"integrity\": [\n      \"unknown\"\n    ],\n    \"positioning\": [\n      \"unknown\"\n    ],\n    \"hot_zone_cues\": [\n      \"occluded\"\n    ],\n    \"cosmetics\": [\n      \"oily\",\n      \"glare\"\n    ]\n  },\n  \"roi_notes\": \"The region of interest is the central, large-diameter black hose which appears to be a heat sleeve. Its surface is obscured by blur and a bright, overexposed light source to the right, preventing detailed inspection.\",\n  \"pitfall_checks\": [\n    \"distinguish_cosmetic_vs_structural\",\n    \"text_on_hose_not_conclusive\",\n    \"angle_occlusion_checked\",\n    \"component_mis-ID_checked\"\n  ],\n  \"needs_followup\": true,\n  \"followup_recommendations\": \"A new photo is required. Please provide a stable, focused image of the same area. Avoid using a direct flashlight that causes glare. It is critical to capture the sleeve and any nearby metallic components (like the one at the bottom-left) in the same frame to establish context.\"\n}\n```",
+      "parsed_response": {
+        "classification": "Uncertain",
+        "confidence": 0.2,
+        "evidence_summary": "The target heat protection sleeve is heavily obscured by motion blur, poor lighting, and severe overexposure, making it impossible to assess its structural integrity. The proximity to a definitive heat source is also unclear due to the tight framing and other components blocking the view.",
+        "observations": {
+          "sleeve_presence": "present",
+          "coverage_in_heat_zone": "uncertain",
+          "integrity": [
+            "unknown"
+          ],
+          "positioning": [
+            "unknown"
+          ],
+          "hot_zone_cues": [
+            "occluded"
+          ],
+          "cosmetics": [
+            "oily",
+            "glare"
+          ]
+        },
+        "roi_notes": "The region of interest is the central, large-diameter black hose which appears to be a heat sleeve. Its surface is obscured by blur and a bright, overexposed light source to the right, preventing detailed inspection.",
+        "pitfall_checks": [
+          "distinguish_cosmetic_vs_structural",
+          "text_on_hose_not_conclusive",
+          "angle_occlusion_checked",
+          "component_mis-ID_checked"
+        ],
+        "needs_followup": true,
+        "followup_recommendations": "A new photo is required. Please provide a stable, focused image of the same area. Avoid using a direct flashlight that causes glare. It is critical to capture the sleeve and any nearby metallic components (like the one at the bottom-left) in the same frame to establish context."
+      },
+      "processing_time": "2025-09-23T21:47:47.277278"
+    }
+  ]
+}
