@@ -506,61 +506,33 @@ class ResultsAnalyzer:
 
     
     def print_analysis_summary(self, metrics: Dict[str, Any], total_images: int):
-        """Print analysis summary to console"""
-        
+        """Print a summary of the analysis metrics to the console."""
         print("\n" + "=" * 60)
         print("📊 ANALYSIS SUMMARY")
         print("=" * 60)
-        
+
         if "error" in metrics:
             print(f"❌ {metrics['error']}")
             return
-        
-        overall = metrics["overall"]
-        
+
+        overall = metrics.get("overall", {})
+
         print(f"📸 Total Images Analyzed: {total_images}")
-        print(f"✅ Valid Predictions: {overall['total_samples']}")
-        print(f"🎯 Overall Accuracy: {overall['accuracy']:.2%}")
-        print(f"📈 Macro F1-Score: {overall['f1_macro']:.3f}")
-        
+        print(f"✅ Valid Predictions: {overall.get('total_samples', 0)}")
+        print(f"🎯 Overall Accuracy: {overall.get('accuracy', 0.0):.2%}")
+        print(f"📈 Macro F1-Score: {overall.get('f1_macro', 0.0):.3f}")
+
         print(f"\n🏷️  PER-CLASS PERFORMANCE:")
-        for class_name, class_metrics in metrics["per_class"].items():
+        for class_name, class_metrics in (metrics.get("per_class", {}) or {}).items():
+            precision = class_metrics.get("precision", 0.0)
+            recall = class_metrics.get("recall", 0.0)
+            f1 = class_metrics.get("f1_score", 0.0)
+            support = class_metrics.get("support", 0)
             print(f"   {class_name}:")
-            print(f"      Precision: {class_metrics['precision']:.3f}")
-            print(f"      Recall: {class_metrics['recall']:.3f}")
-            print(f"      F1-Score: {class_metrics['f1_score']:.3f}")
-            print(f"      Support: {class_metrics['support']}")
-        
-        # Uncertainty section
-        uncertain = [r for r in results["results"] if r.get("predicted_class") == "Uncertain"]
-        if uncertain:
-            from collections import Counter
-            reason_counter = Counter()
-            question_counter = Counter()
-            for r in uncertain:
-                reason_counter.update((r.get("why_uncertain", {}) or {}).get("reasons", []) or [])
-                question_counter.update(r.get("missing_information_questions", []) or [])
-
-            html_content += """
-            <div class="section">
-              <h2>🤔 Uncertainty Analysis</h2>
-              <p>Total Uncertain: <strong>{count}</strong></p>
-            """.format(count=len(uncertain))
-
-            if reason_counter:
-                html_content += "<h3>Top Reasons</h3><ul>"
-                for reason, cnt in reason_counter.most_common(10):
-                    html_content += f"<li>{reason}: {cnt}</li>"
-                html_content += "</ul>"
-
-            if question_counter:
-                html_content += "<h3>Frequently Raised Questions (from model)</h3><ol>"
-                for q, cnt in question_counter.most_common(10):
-                    html_content += f"<li>{q} <em>({cnt}×)</em></li>"
-                html_content += "</ol>"
-
-            html_content += "</div>"
-
+            print(f"      Precision: {precision:.3f}")
+            print(f"      Recall: {recall:.3f}")
+            print(f"      F1-Score: {f1:.3f}")
+            print(f"      Support: {support}")
 
     def print_binary_analysis(self, df_clean: pd.DataFrame):
         """Print a classification report for binary (OK/Broken) cases only."""
