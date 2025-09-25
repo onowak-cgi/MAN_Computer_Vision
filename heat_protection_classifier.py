@@ -24,6 +24,66 @@ from google import genai
 from google.genai import types
 from google.api_core import exceptions
 from dotenv import load_dotenv
+# 🔧 FILE: heat_protection_classifier.py
+# ADD after imports
+import re
+from collections import defaultdict
+from typing import Dict, List, Tuple
+
+ENGINE_PATTERN = re.compile(r"^(?P<engine_id>\d+)_image_(?P<idx>\d+)\.(jpg|jpeg|png|bmp|webp)$", re.IGNORECASE)
+
+def parse_engine_id(filename: str) -> Tuple[str, int]:
+    """
+    Extract (engine_id, idx) from '147310880_image_4.jpeg'.
+    """
+    name = Path(filename).name
+    m = ENGINE_PATTERN.match(name)
+    if not m:
+        raise ValueError(f"Filename does not match expected pattern: {filename}")
+    return m.group("engine_id"), int(m.group("idx"))
+
+def group_images_by_engine(directories: List[str]) -> Tuple[Dict[str, List[Path]], Dict[str, str]]:
+    """
+    Group images by engine_id across given directories.
+    Also infer ground truth label per engine from directory name:
+      - 'correct' -> OK
+      - 'notcorrect' -> Broken
+    """
+    groups: Dict[str, List[Path]] = defaultdict(list)
+    gt_by_engine: Dict[str, str] = {}
+
+    for d in directories:
+        dpath = Path(d)
+        if not dpath.exists():
+            print(f"⚠️  Directory not found: {dpath}")
+            continue
+        dname = dpath.name.lower()
+        if "correct" in dname and "not" not in dname:
+            label = "OK"
+        elif "notcorrect" in dname or "broken" in dname:
+            label = "Broken"
+        else:
+            label = "Unknown"
+
+        for p in dpath.glob("*.*"):
+            if not p.is_file():
+                continue
+            try:
+                engine_id, _ = parse_engine_id(p.name)
+            except ValueError:
+                continue
+            groups[engine_id].append(p)
+            prev = gt_by_engine.get(engine_id)
+            if prev is None:
+                gt_by_engine[engine_id] = label
+            elif prev != label:
+                gt_by_engine[engine_id] = "Unknown"  # conflict safeguard
+
+    # Sort views per engine by index
+    for engine_id, paths in groups.items():
+        groups[engine_id] = sorted(paths, key=lambda p: parse_engine_id(p.name)[1])
+
+    return groups, gt_by_engine
 
 # Load environment variables from .env file
 load_dotenv()
@@ -34,66 +94,199 @@ API_KEY = os.getenv("API_KEY_2")
 # Configure logging to show tenacity's retry attempts
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# System prompt for heat protection sleeve classification
+
+# SYSTEM_PROMPT (binary only)
 SYSTEM_PROMPT = """
 Role & Objective
-You are a senior automotive technician specialized in visual inspection of heat protection sleeves (HPS) in engine compartments. Your task is to classify each input image as OK, Broken, or Uncertain with a clear, evidence‑based rationale, focusing only on the heat protection sleeve and its immediate context.
+You are a senior automotive technician specialized in visual inspection of heat protection sleeves (HPS) in engine compartments. Your task is to classify each input engine as OK or Broken with a clear, evidence‑based rationale, focusing only on the heat protection sleeve and its immediate context. You may receive multiple images of the SAME engine (same case id); consider ALL views jointly to decide.
 
 1) Scope & Definitions
-
 Target component: Heat Protection Sleeve (HPS) — a protective sheath (often reflective foil, braided fiberglass, textile, or black sleeve) that shields hoses/wires from thermal sources (e.g., exhaust manifold, turbo, EGR pipes).
 Hot zone proximity: Any area close to metallic parts that typically run hot (exhaust/turbo housings, EGR piping, DPF lines). Sleeves are expected primarily in these zones.
-Underlying line: The hose/wire/conduit that the sleeve protects (often rubber or polymer; may show printed part numbers).
+Underlying line: The hose/wire/conduit that the sleeve protects.
 
 2) Decision Classes & Core Criteria
-A. OK (Healthy) — All must be true, unless otherwise noted:
-
-Presence & Coverage: A sleeve is present where a sleeve is expected (i.e., along segments near heat sources). Coverage is continuous across the hot zone, with no major gaps exposing underlying line in the heat-adjacent segment.
-Integrity: No significant fraying, tears, punctures, cracks, melted/charred spots, or open seams that expose the underlying line along the hot zone.
-Positioning: Sleeve is not obviously slipped back; end terminations look intentional (trimmed/finished). Fastening (clamps/zip ties/tape wraps) appears serviceable where visible.
-Surface condition: Dust, dirt, and loss of shine are acceptable (do not classify as broken for cosmetic soiling).
-Accepted exceptions: Brief, intentional exposure near connectors, bends, or branching points outside the heat-critical segment is acceptable.
+A. OK (Healthy) — All must be true (allowing minor, non-critical exceptions):
+- Presence & Coverage: A sleeve is present where expected and coverage is continuous across the heat-critical segment.
+- Integrity: No significant fraying/tears/holes/melted/charred areas or split seams exposing the line in the heat zone.
+- Positioning: Not obviously slipped back; terminations intentional; fasteners serviceable.
+- Cosmetic soiling (dust/dullness) is acceptable.
+- Brief intentional exposure at connectors/bends/branches outside the heat-critical segment is acceptable.
 
 B. Broken (Faulty)
+- Missing/Displaced Sleeve in the heat-critical segment.
+- Structural damage exposing the line in heat-critical area (fray/tear/hole/burn/melted/split seam).
+- Inadequate coverage in heat-critical segment (e.g., >~2–3 cm gap).
+- Fastener failure causing exposure in heat-critical area.
 
-Missing/Displaced Sleeve: No sleeve where one is expected near a heat source or the sleeve has slid away, leaving the hot-zone segment bare.
-Structural Damage: Significant fraying, tearing, holes, deep abrasions, burn/char marks, melted areas, split seams causing underlying line exposure in the hot zone.
-Inadequate Coverage: Large gaps in coverage within the heat-critical segment (e.g., sleeve doesn't reach the hot metal area; gap > ~2–3 cm in hot proximity).
-Fastener Failure: Missing/failed retainers/ties causing sleeve to hang loose with exposure in the heat zone.
-
-C. Uncertain (Needs Review)
-
-Occlusion: The relevant segment is blocked, cropped, or out of frame.
-Ambiguous Coverage: Can't confirm presence/absence or condition of the sleeve in the heat-critical segment due to poor lighting, motion blur, or angle.
-Context needed: It's unclear whether the segment is near a heat source (no reliable spatial cues).
-
-Confidence policy: Output Uncertain if confidence < 0.6.
-
-7) Output Format (Strict JSON)
+3) Output Format (Strict JSON)
 Return only the following JSON (no extra commentary):
 
 {
-  "classification": "OK | Broken | Uncertain",
+  "classification": "OK" | "Broken",
   "confidence": 0.0,
   "evidence_summary": "Succinct visual rationale tied to the heat zone and sleeve condition.",
   "observations": {
-    "sleeve_presence": "present | absent | occluded",
-    "coverage_in_heat_zone": "continuous | partial_gap | absent | uncertain",
+    "sleeve_presence": "present" | "absent" | "occluded",
+    "coverage_in_heat_zone": "continuous" | "partial_gap" | "absent" | "uncertain",
     "integrity": ["no_damage", "fray", "tear", "hole", "burn_char", "melted", "split_seam", "unknown"],
     "positioning": ["well_positioned", "slipped_back", "loose_end", "missing_fastener", "unknown"],
     "hot_zone_cues": ["exhaust_metal_nearby", "turbo_housing", "egr_pipe", "none_visible", "occluded"],
     "cosmetics": ["dusty", "clean", "oily", "glare", "shadowed"]
   },
-  "roi_notes": "Describe where on the image the heat zone and sleeve were inspected (landmarks, relative positions).",
-  "pitfall_checks": ["distinguish_cosmetic_vs_structural", "text_on_hose_not_conclusive", "angle_occlusion_checked", "component_mis-ID_checked"],
-  "needs_followup": false,
-  "followup_recommendations": "If Uncertain or low confidence, specify desired angle/zoom/lighting."
+  "roi_notes": "Describe where the heat zone and sleeve were inspected (landmarks, relative positions).",
+  "pitfall_checks": ["distinguish_cosmetic_vs_structural", "text_on_hose_not_conclusive", "angle_occlusion_checked", "component_mis-ID_checked"]
 }
+
+Validation rules:
+- classification MUST be either "OK" or "Broken".
+- Return only the JSON object described above.
+
+Return only the JSON object (no Markdown, no triple backticks, no commentary).
 """
 
-USER_PROMPT = "Classify the heat protection sleeve in this engine photo. Focus on the hot-zone segment. Return only the JSON as specified. If Uncertain, tell me exactly which angle/area to re-capture."
+USER_PROMPT = "Classify this ENGINE using all provided views jointly. Focus on the hot-zone segment and return ONLY the strict JSON (OK or Broken)."
+
+MAX_TRAIN_ENGINES_PER_CLASS = 3
+MAX_IMAGES_PER_ENGINE_IN_PROMPT = 6
 
 class HeatProtectionClassifier:
+
+    def classify_grouped_engines(self,
+                                 test_dirs: List[str],
+                                 train_correct_dir: str = "Archiv/correct_training",
+                                 train_notcorrect_dir: str = "Archiv/notcorrect_training"):
+        """
+        Classify all ENGINES found in the given test directories, using multi-view training exemplars.
+        Returns a list of engine-level result dicts.
+        """
+        # Prepare training examples
+        training_examples = self.select_training_examples_from_dirs(train_correct_dir, train_notcorrect_dir)
+
+        # Group test engines
+        test_groups, test_gt = group_images_by_engine(test_dirs)
+
+        all_results = []
+        for engine_id, paths in test_groups.items():
+            try:
+                raw_text = self.classify_engine_views(engine_id, paths, training_examples)
+                try:
+                    result_json = json.loads(raw_text)
+                except json.JSONDecodeError:
+                    result_json = {"classification": "ERROR", "confidence": 0.0, "evidence_summary": f"Non-JSON output: {raw_text[:200]}..."}
+
+                all_results.append({
+                    "engine_id": engine_id,
+                    "image_names": [p.name for p in paths],
+                    "image_paths": [str(p) for p in paths],
+                    "ground_truth": test_gt.get(engine_id, "Unknown"),
+                    "predicted_class": result_json.get("classification", "ERROR"),
+                    "confidence": result_json.get("confidence"),
+                    "evidence_summary": result_json.get("evidence_summary"),
+                })
+            except Exception as e:
+                all_results.append({
+                    "engine_id": engine_id,
+                    "image_names": [p.name for p in paths],
+                    "image_paths": [str(p) for p in paths],
+                    "ground_truth": test_gt.get(engine_id, "Unknown"),
+                    "predicted_class": "ERROR",
+                    "confidence": 0.0,
+                    "evidence_summary": f"Exception: {e}",
+                })
+        return all_results
+
+
+    def classify_engine_views(self, engine_id: str, image_paths: List[Path], training_examples: Dict[str, List[Dict]]):
+        """
+        Classify a SINGLE ENGINE using ALL its views jointly.
+        Returns the JSON text from Gemini.
+        """
+        # Upload engine views
+        engine_files = self._upload_engine_views(image_paths)
+        if not engine_files:
+            raise FileNotFoundError(f"No valid views for engine {engine_id}")
+
+        # Build contents
+        contents = self._build_contents_for_engine(engine_id, engine_files, training_examples)
+
+        # Generate with retry
+        try:
+            print(f"🤖 Classifying engine {engine_id} with {len(engine_files)} views ...")
+            response = self._generate_content_with_retry(
+                model="gemini-2.5-pro",
+                contents=contents,
+                config=types.GenerateContentConfig(system_instruction=SYSTEM_PROMPT),
+            )
+            print("✅ Engine classification completed")
+            return response.text
+        except Exception as e:
+            raise Exception(f"Engine classification failed: {e}")
+
+
+    def _build_contents_for_engine(self, engine_id: str, engine_files: List, training_examples: Dict[str, List[Dict]]):
+        """
+        Construct the Gemini 'contents' sequence:
+          - multiple training exemplars (OK/Broken), each with multiple images + label text
+          - a TARGET section containing all views of the engine to classify + USER_PROMPT
+        """
+        contents = []
+
+        # Few-shot multi-view training exemplars
+        for label in ("OK", "Broken"):
+            for ex in training_examples.get(label, []):
+                contents.append(f"TRAINING EXAMPLE ({label}) — Engine {ex['engine_id']} — multiple views follow:")
+                for f in ex["files"]:
+                    contents.append(f)
+                contents.append(f"Label: {label} (binary schema)")
+
+        # Target engine with all views
+        contents.append(f"TARGET ENGINE ({engine_id}) — multiple views follow:")
+        for f in engine_files:
+            contents.append(f)
+        contents.append(USER_PROMPT)  # instruct to output only strict JSON
+
+        return contents
+
+
+    def _upload_engine_views(self, paths: List[Path]):
+        """Upload multiple local paths and return file objects."""
+        uploaded = []
+        for p in paths[:MAX_IMAGES_PER_ENGINE_IN_PROMPT]:
+            if not p.exists():
+                print(f"⚠️ Missing file: {p}")
+                continue
+            try:
+                fobj = self.client.files.upload(file=str(p))
+                uploaded.append(fobj)
+                print(f"✅ Uploaded: {p.name}")
+            except Exception as e:
+                print(f"❌ Upload failed for {p}: {e}")
+        return uploaded
+
+    def select_training_examples_from_dirs(self, correct_training_dir: str, notcorrect_training_dir: str):
+        """
+        Load multi-view training engines from the given directories, upload their images,
+        and return dict with examples per class.
+        """
+        train_dirs = [correct_training_dir, notcorrect_training_dir]
+        groups, gt = group_images_by_engine(train_dirs)
+
+        ok_engines = [(eid, paths) for eid, paths in groups.items() if gt.get(eid) == "OK"]
+        br_engines = [(eid, paths) for eid, paths in groups.items() if gt.get(eid) == "Broken"]
+
+        ok_engines = ok_engines[:MAX_TRAIN_ENGINES_PER_CLASS]
+        br_engines = br_engines[:MAX_TRAIN_ENGINES_PER_CLASS]
+
+        examples = {"OK": [], "Broken": []}
+        for label, engines in (("OK", ok_engines), ("Broken", br_engines)):
+            for eid, paths in engines:
+                uploaded_files = self._upload_engine_views(paths)
+                if uploaded_files:
+                    examples[label].append({"engine_id": eid, "files": uploaded_files})
+        print(f"📦 Training examples -> OK: {len(examples['OK'])}, Broken: {len(examples['Broken'])}")
+        return examples
+
     def __init__(self, api_key: str = None):
         """Initialize the classifier with Google Gemini client"""
         # Use the provided api_key or fall back to the one from the .env file
@@ -285,11 +478,27 @@ class HeatProtectionClassifier:
         
         return results
 
+# Main function for command-line usage
 def main():
     """Main function for command-line usage"""
+    import argparse
+
     print("🔧 Heat Protection Sleeve Classifier")
     print("=" * 50)
-    
+
+    parser = argparse.ArgumentParser(description="Classify HPS images (single image or grouped engines).")
+    parser.add_argument("--target", "-t", help="Path to a single image (legacy single-image mode).")
+    parser.add_argument("--directories", "-d", nargs="+",
+                        default=["Archiv/correct", "Archiv/notcorrect"],
+                        help="Test directories with engine images (multi-view engines).")
+    parser.add_argument("--train-correct", default="Archiv/correct_training",
+                        help="Directory with OK training engines (multi-view).")
+    parser.add_argument("--train-notcorrect", default="Archiv/notcorrect_training",
+                        help="Directory with Broken training engines (multi-view).")
+    parser.add_argument("--batch-mode", action="store_true",
+                        help="If set, run engine-level batch classification using directories.")
+    args = parser.parse_args()
+
     # Initialize classifier
     try:
         classifier = HeatProtectionClassifier()
@@ -297,30 +506,37 @@ def main():
     except Exception as e:
         print(f"❌ Failed to initialize classifier: {e}")
         return 1
-    
-    # Determine target image
-    if len(sys.argv) > 1:
-        target_image = sys.argv[1]
-    else:
-        # Use default test image
-        target_image = "Archiv/notcorrect/145700277_image_2.jpeg"
+
+    if args.batch_mode:
+        # Engine-level classification using dirs
+        results = classifier.classify_grouped_engines(
+            test_dirs=args.directories,
+            train_correct_dir=args.train_correct,
+            train_notcorrect_dir=args.train_notcorrect
+        )
+        print("\n" + "=" * 50)
+        print("🎯 ENGINE-LEVEL RESULTS (JSON lines):")
+        print("=" * 50)
+        for r in results:
+            print(json.dumps(r, ensure_ascii=False))
+        print("\n✨ Engine-batch classification completed!")
+        return 0
+
+    # Legacy single-image mode
+    target_image = args.target or "Archiv/notcorrect/145700277_image_2.jpeg"
+    if not args.target:
         print(f"ℹ️  No target image specified, using default: {target_image}")
-    
-    # Classify image
+
     try:
         result = classifier.classify_image(target_image)
         print("\n" + "=" * 50)
-        print("🎯 CLASSIFICATION RESULT:")
+        print("🎯 CLASSIFICATION RESULT (single image):")
         print("=" * 50)
         print(result)
-        
     except Exception as e:
         print(f"❌ Classification failed: {e}")
         return 1
-    
+
     print("\n✨ Classification completed successfully!")
     return 0
 
-if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)

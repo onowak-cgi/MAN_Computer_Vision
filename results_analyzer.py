@@ -54,31 +54,33 @@ class ResultsAnalyzer:
         records = []
         for result in results["results"]:
             record = {
-                "image_name": result["image_name"],
+                "engine_id": result.get("engine_id"),
+                "image_names": result.get("image_names", []),
+                "image_count": len(result.get("image_names", [])),
                 "ground_truth": result["ground_truth"],
                 "predicted_class": result["predicted_class"],
-                "confidence": result["confidence"],
-                "evidence_summary": result["evidence_summary"],
-                "correct": result["ground_truth"] == result["predicted_class"] if result["ground_truth"] != "Unknown" else None,
-                "best_guess": result.get("best_guess"),
-                "best_guess_confidence": result.get("best_guess_confidence"),
-                "why_uncertain_reasons": (result.get("why_uncertain", {}) or {}).get("reasons", []),
-                "why_uncertain_narrative": (result.get("why_uncertain", {}) or {}).get("narrative"),
-                "missing_information_questions": result.get("missing_information_questions", []),
+                "confidence": result.get("confidence"),
+                "evidence_summary": result.get("evidence_summary"),
+                "correct": (result["ground_truth"] == result["predicted_class"])
+                           if (result["ground_truth"] != "Unknown" and result["predicted_class"] != "ERROR") else None,
             }
             records.append(record)
-        
+
         df = pd.DataFrame(records)
-        
-        # Filter out errors and unknown ground truth for accuracy calculations
+
+        # Sanitize: allow only OK/Broken/ERROR; map anything else to ERROR (legacy Uncertain etc.)
+        valid = {"OK", "Broken", "ERROR"}
+        df.loc[~df["predicted_class"].isin(valid), "predicted_class"] = "ERROR"
+
+        # Engine-level clean subset
         df_clean = df[
-            (df["predicted_class"] != "ERROR") & 
+            (df["predicted_class"] != "ERROR") &
             (df["ground_truth"] != "Unknown")
         ].copy()
-        
-        print(f"📊 Clean data: {len(df_clean)} images with known ground truth")
-        
+
+        print(f"📊 Clean data (engines): {len(df_clean)} with known ground truth")
         return df, df_clean
+
     
     def create_confusion_matrix(self, df_clean: pd.DataFrame, save_path: str = None) -> np.ndarray:
         """Create and visualize confusion matrix"""
@@ -290,18 +292,25 @@ class ResultsAnalyzer:
         plt.show()
     
     def generate_report(self, results: Dict[str, Any], metrics: Dict[str, Any],
-                        metrics_bg: Dict[str, Any] = None, save_path: str = None) -> str:
-        """Generate an HTML performance report"""
+                        save_path: str = None) -> str:
+        """
+        Generate an HTML performance report (binary-only: OK/Broken).
+        Shows engine-level metadata and omits any Uncertain/Best-Guess sections.
+        """
+        import datetime
+        from pathlib import Path
+
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        metadata = results.get("metadata", {}) or {}
 
         # Handle both old 'directory' and new 'directories' formats
-        metadata = results.get("metadata", {}) or {}
         if "directories" in metadata and isinstance(metadata["directories"], list):
             test_dirs = ", ".join(metadata["directories"])
         else:
             test_dirs = metadata.get("directory", "Unknown")
 
         total_images_meta = metadata.get("total_images", "Unknown")
+        total_engines_meta = metadata.get("total_engines")
 
         # Basic HTML skeleton and styles
         html_content = f"""<!DOCTYPE html>
@@ -321,20 +330,19 @@ class ResultsAnalyzer:
         .warning {{ color: orange; font-weight: bold; }}
         .error {{ color: red; font-weight: bold; }}
         .small {{ color: #666; font-size: 12px; }}
-        code, pre {{ background: #fafafa; border: 1px solid #eee; padding: 2px 4px; border-radius: 3px; }}
       </style>
     </head>
     <body>
-
       <div class="header">
         <h1>🔧 Heat Protection Sleeve Classification Report</h1>
         <p><strong>Generated:</strong> {timestamp}</p>
         <p><strong>Test Directory:</strong> {test_dirs}</p>
+        <p><strong>Total Engines (metadata):</strong> {total_engines_meta if total_engines_meta is not None else 'N/A'}</p>
         <p><strong>Total Images (metadata):</strong> {total_images_meta}</p>
       </div>
     """
 
-        # Overall performance block
+        # Overall performance block (binary-only)
         if "error" not in metrics:
             overall = metrics.get("overall", {}) or {}
 
@@ -355,7 +363,7 @@ class ResultsAnalyzer:
         <div class="metric">Precision (Macro): {overall.get('precision_macro', 0.0):.3f}</div>
         <div class="metric">Recall (Macro): {overall.get('recall_macro', 0.0):.3f}</div>
         <div class="metric">F1-Score (Macro): {overall.get('f1_macro', 0.0):.3f}</div>
-        <div class="metric">Total Samples (valid): {overall.get('total_samples', 0)}</div>
+        <div class="metric">Total Samples (valid engines): {overall.get('total_samples', 0)}</div>
       </div>
 
       <div class="section">
@@ -380,49 +388,8 @@ class ResultsAnalyzer:
     """
             html_content += "    </table>\n  </div>\n"
 
-        # Uncertainty Analysis section (using per-image `results["results"]`)
-        uncertain = [r for r in results.get("results", []) if r.get("predicted_class") == "Uncertain"]
-        if uncertain:
-            from collections import Counter
-            reason_counter = Counter()
-            question_counter = Counter()
-
-            for r in uncertain:
-                reasons = ((r.get("why_uncertain", {}) or {}).get("reasons", []) or [])
-                reason_counter.update(reasons)
-                qs = (r.get("missing_information_questions", []) or [])
-                question_counter.update(qs)
-
-            html_content += f"""
-      <div class="section">
-        <h2>🤔 Uncertainty Analysis</h2>
-        <p>Total Uncertain: <strong>{len(uncertain)}</strong></p>
-    """
-
-            if reason_counter:
-                html_content += "    <h3>Top Reasons</h3>\n    <ul>\n"
-                for reason, cnt in reason_counter.most_common(10):
-                    html_content += f"      <li>{reason}: {cnt}</li>\n"
-                html_content += "    </ul>\n"
-
-            if question_counter:
-                html_content += "    <h3>Frequently Raised Questions (from model)</h3>\n    <ol>\n"
-                for q, cnt in question_counter.most_common(10):
-                    html_content += f"      <li>{q} <em>({cnt}×)</em></li>\n"
-                html_content += "    </ol>\n"
-
-            html_content += "  </div>\n"
-
-        if metrics_bg and ("overall" in metrics_bg):
-            overall_bg = metrics_bg.get("overall", {}) or {}
-            html_content += f"""
-      <div class="section">
-        <h2>📊 Performance Using Best Guess (for Uncertain)</h2>
-        <div class="metric">Accuracy (with best guess): <strong>{overall_bg.get('accuracy', 0.0):.2%}</strong></div>
-        <div class="metric">Macro F1 (with best guess): {overall_bg.get('f1_macro', 0.0):.3f}</div>
-        <p class="small"><em>Note:</em> This analysis view replaces 'Uncertain' predictions with their 'best_guess' solely for evaluation. Original stored predictions remain unchanged.</p>
-      </div>
-    """
+        # Close HTML
+        html_content += "\n</body>\n</html>\n"
 
         # Save report
         if save_path is None:
@@ -433,7 +400,6 @@ class ResultsAnalyzer:
         print(f"📄 Generated performance report: {save_path}")
 
         return str(save_path)
-
     
     def analyze_results(self, results_file: str) -> Dict[str, Any]:
         """Main analysis workflow"""
@@ -442,55 +408,30 @@ class ResultsAnalyzer:
         # 1) Load results
         results = self.load_results(results_file)
 
-        # 2) Prepare data
+        # 2) Prepare data (engine-level, binary-only; sanitizer inside)
         df, df_clean = self.prepare_data(results)
 
-        # 3) Strict confusion matrix (saved to file)
+        # 3) Confusion matrix (save to file)
         cm = self.create_confusion_matrix(
             df_clean,
             save_path=self.output_dir / "confusion_matrix.png"
         )
 
-        # 4) Strict metrics
+        # 4) Strict binary metrics
         metrics = self.calculate_metrics(df_clean)
 
-        # 5) Confidence analysis (saved to file)
-        #    Uses the full df (includes 'Unknown' GT filtering inside the plot logic where needed)
+        # 5) Confidence analysis (save to file)
         self.create_confidence_analysis(
             df,
             save_path=self.output_dir / "confidence_analysis.png"
         )
 
-        # 6) Best-guess view (optional but recommended)
-        #    Replace 'Uncertain' predictions with their 'best_guess' for analysis only.
-        cm_bg = []
-        metrics_bg = None
+        # 6) HTML report (binary-only)
+        report_path = self.generate_report(results, metrics)
 
-        # These helpers should be added to ResultsAnalyzer as suggested earlier.
-        # Guarded calls allow backward compatibility if they don't exist yet.
-        if hasattr(self, "create_confusion_matrix_with_best_guess"):
-            try:
-                cm_bg_arr = self.create_confusion_matrix_with_best_guess(
-                    df,
-                    save_path=self.output_dir / "confusion_matrix_with_best_guess.png"
-                )
-                if cm_bg_arr is not None and getattr(cm_bg_arr, "size", 0) > 0:
-                    cm_bg = cm_bg_arr.tolist()
-            except Exception as e:
-                print(f"⚠️  Skipped best-guess confusion matrix due to error: {e}")
-
-        if hasattr(self, "calculate_metrics_with_best_guess"):
-            try:
-                metrics_bg = self.calculate_metrics_with_best_guess(df)
-            except Exception as e:
-                print(f"⚠️  Skipped best-guess metrics due to error: {e}")
-
-        # 7) Generate HTML report (includes uncertainty analysis and optional best-guess section)
-        # 🔧 If you don't want to include best-guess metrics in the report, pass `metrics_bg=None`.
-        report_path = self.generate_report(results, metrics, metrics_bg=metrics_bg)
-
-        # 8) Console summaries
+        # 7) Console summaries
         self.print_analysis_summary(metrics, total_images=len(df))
+        # Keeps a binary report (OK vs Broken). With Uncertain removed, this equals the strict view.
         self.print_binary_analysis(df_clean)
 
         print("\n✨ Analysis completed successfully!")
@@ -498,11 +439,10 @@ class ResultsAnalyzer:
 
         return {
             "metrics": metrics,
-            "metrics_with_best_guess": metrics_bg,
             "confusion_matrix": cm.tolist() if getattr(cm, "size", 0) > 0 else [],
-            "confusion_matrix_with_best_guess": cm_bg,
             "report_path": report_path,
         }
+
 
     
     def print_analysis_summary(self, metrics: Dict[str, Any], total_images: int):
